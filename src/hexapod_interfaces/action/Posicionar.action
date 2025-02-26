@@ -1,0 +1,5 @@
+int32[] positions #Entrada: posicion de articulaciones
+---
+bool flag #Salida: Finalizacion de posicionamiento
+---
+string status #Feedback: estado de los motores

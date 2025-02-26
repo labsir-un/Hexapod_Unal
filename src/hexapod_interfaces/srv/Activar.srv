@@ -1,0 +1,3 @@
+bool indicacion #Entrada: iniciar|parar proceso
+---
+bool flag #Salida: confirmacion de recepcion 

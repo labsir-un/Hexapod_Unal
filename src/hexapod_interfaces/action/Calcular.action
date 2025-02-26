@@ -1,0 +1,5 @@
+bool indicacion #Entrada: inicio de calculo
+---
+bool flag #Salida: Finalizacion de calculo
+---
+int32 position #Feedback: posicion calculada
