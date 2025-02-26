@@ -27,7 +27,7 @@ class TransformationNode(Node):
         self.received_data = []
         self.radianes = []
 
-        self.request_timer = self.create_timer(0.001, self.check_and_send_request)
+        self.request_timer = self.create_timer(0.0001, self.check_and_send_request)
 
     def service_callback(self, request, response):
         self.flag = request.indicacion
