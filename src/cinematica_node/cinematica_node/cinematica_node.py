@@ -51,7 +51,7 @@ class CinematicaNode(Node):
         """Servicio para enviar una posición específica de la trayectoria calculada."""
         index = request.index
         if index >= self.max:
-            index -= self.max  # Asegura que el índice esté dentro del rango
+            index -= (index // self.max)*self.max  # Asegura que el índice esté dentro del rango
         
         self.get_logger().info(f'Received request for Position {index}')
         response.positions = self.q[:, index].flatten().tolist()  # Envía la posición solicitada
