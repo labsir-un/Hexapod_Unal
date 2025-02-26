@@ -1,17 +1,22 @@
-# Hexapod ROS2
+# Hexapod ROS 2  
 
 ## Authors  
 
-* **Andres Camilo Torres Cajamarca** – *Mechatronic Engineering Student*  
-* **Felipe Chaves Delgadillo** – *Mechatronic Engineering Student*  
+* **Andres Camilo Torres Cajamarca** – *Mechatronics Engineering Student*  
+* **Felipe Chaves Delgadillo** – *Mechatronics Engineering Student*  
+
+## Tutors  
+
+* **Ph.D. Eng. Pedro Fabián Cárdenas Herrera**  
+* **Ph.D. Eng. Ricardo Emiro Ramírez Heredia**  
 
 ## Description  
 
 ROS 2 Humble packages for controlling an 18-DOF (Degrees of Freedom) hexapod robot.  
 
-## Usage  
+## Installation and Usage  
 
-To use these packages, you must install the following prerequisites:  
+Before using these packages, install the following prerequisites:  
 
 * [Ubuntu 22.04](https://releases.ubuntu.com/jammy/)  
 * [ROS 2 Humble](https://docs.ros.org/en/humble/index.html)  
@@ -26,7 +31,7 @@ colcon build
 source install/setup.bash
 ```
 
-With this, you can use the packages by following the User's Manual.
+After completing these steps, you can use the packages by following the User Manual.
 
 ## User Manual
 
