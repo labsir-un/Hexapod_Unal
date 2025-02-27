@@ -80,6 +80,4 @@ Then, *transformation_node* will retrieve the first array of positions and attem
 
 Once *dynamixel_node* reaches all the positions, *transformation_node* will retrieve the next position, repeating the process until the user stops it.
 
-**PRUEBA**
-
 #### Automatic
