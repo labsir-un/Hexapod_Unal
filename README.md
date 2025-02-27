@@ -40,3 +40,45 @@ After completing these steps, you can use the packages by following the User Man
 ### Understanding ROS 2 Nodes, Topics, Services, and Actions  
 
 ### Launching ROS 2 Nodes  
+
+#### Using Laptop
+
+The following ROS 2 nodes must be launched to use the robot:
+
+* *gui_node*
+* *cinematica_node*
+* *transformation_node*
+* *dynamixel_node*
+
+```bash
+ros2 run gui_node gui_client
+```
+
+```bash
+ros2 run transformation_node transformation_node 
+```
+
+
+```bash
+ros2 run cinematica_node cinematica_node 
+```
+
+
+```bash
+ros2 run dynamixel_node dynamixel_node 
+```
+
+Notes:
+
+* Ensure that all nodes are developed. The *gui_node* will remain in a loop until *transformation_node* is launched, and *transformation_node*  will stay in a loop until *cinematica_node* is launched. 
+* If the U2D2 is not connected, *dynamixel_node* will not work and will attempt to reconnect every 10 seconds.
+* Always check the *logger* for information about the status and functionality of the nodes.
+
+In *gui_node*, when you type **'1'**, the program will start, and the trajectory will be calculated in *cinematica_node*.  
+
+Then, *transformation_node* will retrieve the first position and attempt to send it to *dynamixel_node* via an action.  
+
+Once *dynamixel_node* reaches all the positions, *transformation_node* will retrieve the next position,  
+repeating the process until the user stops it.
+
+#### Automatic
