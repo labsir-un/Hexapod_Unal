@@ -76,9 +76,8 @@ Notes:
 
 In *gui_node*, when you type **'1'**, the program will start, and the trajectory will be calculated in *cinematica_node*.  
 
-Then, *transformation_node* will retrieve the first position and attempt to send it to *dynamixel_node* via an action.  
+Then, *transformation_node* will retrieve the first array of positions and attempt to send it to *dynamixel_node* via an action.  
 
-Once *dynamixel_node* reaches all the positions, *transformation_node* will retrieve the next position,  
-repeating the process until the user stops it.
+Once *dynamixel_node* reaches all the positions, *transformation_node* will retrieve the next position, repeating the process until the user stops it.
 
 #### Automatic
