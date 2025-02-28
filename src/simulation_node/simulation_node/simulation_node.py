@@ -17,7 +17,7 @@ class SimulationNode(Node):
         self.req = SiguientePosicion.Request()
 
         self.publisher = self.create_publisher(String, 'joint_values_rad', 10)
-        self.request_timer = self.create_timer(0.0001, self.check_and_send_request)
+        self.request_timer = self.create_timer(0.05, self.check_and_send_request)
 
     def service_callback(self, request, response):
         self.flag = request.indicacion
