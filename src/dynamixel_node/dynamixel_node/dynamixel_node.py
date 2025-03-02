@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer
 from hexapod_interfaces.action import Posicionar
+from std_srvs.srv import SetBool
 
 # Control table address
 ADDR_TORQUE_ENABLE = 64
@@ -34,6 +35,8 @@ class DynamixelNode(Node):
         super().__init__('dynamixel_node')
         self.action = ActionServer(self, Posicionar, 'posicionar_motores', self.action_callback)
 
+        self.cliente = self.create_client(SetBool,'activar')
+
         if not portHandler.openPort():
             self.get_logger().error(f'Error al abrir el puerto en {DEVICENAME}')
             exit(1)
@@ -50,6 +53,15 @@ class DynamixelNode(Node):
                 self.get_logger().error(f"Error al habilitar torque de motor [{motor_id}]")
             else:
                 self.get_logger().info(f"Torque habilitado en motor [{motor_id}]")
+
+        if not self.cliente.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error("El servidor de 'activar' no está disponible.")
+            rclpy.shutdown()
+            return
+        
+        req = SetBool.Request()
+        req.data = True
+        self.cliente.call(req)
 
     def action_callback(self, goal_handle):
         self.get_logger().info('Posicionando motores con Sync Write')
