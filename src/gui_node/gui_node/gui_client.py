@@ -21,16 +21,16 @@ class GuiClient(Node):
         self.req1 = SetBool.Request()
 
         # Cliente de servicio para activar transformación
-        self.cli = self.create_client(Activar, 'activar')
+        self.cli = self.create_client(SetBool, 'activar')
         if not self.cli.wait_for_service(timeout_sec=5.0):
             self.get_logger().error("El servicio 'activar' no está disponible.")
             rclpy.shutdown()
             return
-        self.req = Activar.Request()
+        self.req = SetBool.Request()
 
     def send_request(self, data):
         """Envía solicitud al servicio 'activar'."""
-        self.req.indicacion = data
+        self.req.data = data
         future = self.cli.call_async(self.req)
         rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
 
