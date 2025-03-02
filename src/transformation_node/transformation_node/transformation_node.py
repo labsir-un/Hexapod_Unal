@@ -36,17 +36,23 @@ class TransformationNode(Node):
         return response
 
     def check_and_send_request(self):
-        if self.flag and not self.action_in_progress:
-            self.action_in_progress = True
-            self.get_logger().info("Enviando solicitud al servicio siguiente_posicion...")
-            self.req.index = self.n
-            future = self.cli.call_async(self.req)
-            future.add_done_callback(self.response_callback)
+        if not self.action_in_progress:  # Solo intenta si no hay otra acción en progreso
+            if self.flag:  # Solo inicia si está activado
+                self.action_in_progress = True
+                self.get_logger().info("Enviando solicitud al servicio siguiente_posicion...")
+                self.req.index = self.n
+                future = self.cli.call_async(self.req)
+                future.add_done_callback(self.response_callback)
+            else:
+                self.get_logger().info("Nodo desactivado. No se enviarán más solicitudes.")
 
     def response_callback(self, future):
         try:
             response = future.result()
-            data_aux = [int(round(2045.0 + ((1028.0 * pos) / 90), 0)) for pos in response.positions]
+            data_aux = [
+                max(0, min(4095, int(round(2045.0 + ((1028.0 * pos) / 90), 0))))
+                for pos in response.positions
+            ]
             self.radianes = [round((pos * 3.141592) / 180, 2) for pos in response.positions]
             
             self.get_logger().info(f"Publicando en joint_values_rad: {self.radianes}")

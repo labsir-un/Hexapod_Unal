@@ -1,81 +1,97 @@
-import rclpy  # Importa la librería de ROS 2 para Python
-from rclpy.node import Node  # Importa la clase base para nodos en ROS 2
-from rclpy.action import ActionClient  # Importa la clase para manejar acciones en ROS 2
-from hexapod_interfaces.srv import Activar  # Importa el servicio personalizado
-from hexapod_interfaces.action import Calcular  # Importa la accion personalizada
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionClient
+from hexapod_interfaces.srv import Activar
+from hexapod_interfaces.action import Calcular
 from std_srvs.srv import SetBool
 
 class GuiClient(Node):
     def __init__(self):
-        super().__init__('gui_client')  # Inicializa el nodo con el nombre 'gui_client'
+        super().__init__('gui_client')
 
-        # Crea un cliente de accion para enviar solicitudes de cálculo de trayectoria
+        # Cliente de acción para calcular trayectoria
         self.act_cli = ActionClient(self, Calcular, 'calcular_trayectoria')
+        if not self.act_cli.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error("El servidor de acciones 'calcular_trayectoria' no está disponible.")
+            rclpy.shutdown()
+            return
 
-        self.cli1 = self.create_client(SetBool, 'finalizar_cinematica') 
+        # Cliente de servicio para finalizar cinemática
+        self.cli1 = self.create_client(SetBool, 'finalizar_cinematica')
         self.req1 = SetBool.Request()
 
-        # Crea un cliente de servicio para activar o desactivar el funcionamiento del nodo trayectoria
-        self.cli = self.create_client(Activar, 'activar')  
-        while not self.cli.wait_for_service(timeout_sec=1.0):  # Espera a que el servicio esté disponible
-            self.get_logger().info('Waiting for service...')
-        self.req = Activar.Request()  # Crea una solicitud para el servicio
-    
+        # Cliente de servicio para activar transformación
+        self.cli = self.create_client(Activar, 'activar')
+        if not self.cli.wait_for_service(timeout_sec=5.0):
+            self.get_logger().error("El servicio 'activar' no está disponible.")
+            rclpy.shutdown()
+            return
+        self.req = Activar.Request()
+
     def send_request(self, data):
-        """Envía una solicitud al servicio 'activar'."""
-        self.req.indicacion = data  # Asigna el valor de la solicitud (True o False)
-        future = self.cli.call_async(self.req)  # Llama al servicio de forma asíncrona
-        rclpy.spin_until_future_complete(self, future)  # Espera la respuesta del servicio
-        return future.result()  # Retorna el resultado de la solicitud
+        """Envía solicitud al servicio 'activar'."""
+        self.req.indicacion = data
+        future = self.cli.call_async(self.req)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
 
-    def send_req_action(self, data):
-        """Envía una solicitud de accion al servidor de acciones 'calcular_trayectoria'."""
-        goal_msg = Calcular.Goal()  # Crea un mensaje de meta para la accion
-        goal_msg.indicacion = True  # Establece el parámetro de indicación en True
+        if future.result() is None:
+            self.get_logger().error("Error al comunicarse con el servicio 'activar'.")
+            return None
+        return future.result()
 
-        self.act_cli.wait_for_server()  # Espera a que el servidor de acciones esté disponible
-        send_goal_future = self.act_cli.send_goal_async(goal_msg)  # Envía la solicitud de accion
-        rclpy.spin_until_future_complete(self, send_goal_future)  # Espera a que la solicitud sea procesada
-        
-        goal_handle = send_goal_future.result()  # Obtiene el resultado del envío de la meta
-        if not goal_handle.accepted:  # Verifica si la meta fue rechazada
-            self.get_logger().info('Error al solicitar trayectoria')
+    def send_req_action(self):
+        """Envía solicitud de acción para calcular trayectoria."""
+        goal_msg = Calcular.Goal()
+        goal_msg.indicacion = True
+
+        send_goal_future = self.act_cli.send_goal_async(goal_msg)
+        rclpy.spin_until_future_complete(self, send_goal_future, timeout_sec=10.0)
+
+        goal_handle = send_goal_future.result()
+        if not goal_handle or not goal_handle.accepted:
+            self.get_logger().error('Error al solicitar trayectoria.')
             return False
 
-        self.get_logger().info('Calculando...')  # Mensaje de confirmación de aceptación de la meta
+        self.get_logger().info('Calculando...')
 
-        get_result_future = goal_handle.get_result_async()  # Obtiene el resultado de la accion
-        rclpy.spin_until_future_complete(self, get_result_future)  # Espera a que el resultado esté disponible
+        get_result_future = goal_handle.get_result_async()
+        rclpy.spin_until_future_complete(self, get_result_future, timeout_sec=10.0)
 
-        result = get_result_future.result().result  # Extrae el resultado
-        return result.flag  # Retorna el flag obtenido de la accion
+        result = get_result_future.result()
+        return result.result.flag if result else False
 
     def send_req_service(self):
+        """Envía señal para finalizar cinemática."""
         self.req1.data = True
-        future = self.cli1.call(self.req1)
+        future = self.cli1.call_async(self.req1)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
 
 def main(args=None):
-    """Función principal que ejecuta el nodo y maneja la interaccion con el usuario."""
-    rclpy.init(args=args)  # Inicializa ROS 2
-    gui_client = GuiClient()  # Crea una instancia del cliente GUI
-    
+    rclpy.init(args=args)
+    gui_client = GuiClient()
+
+    if not gui_client.act_cli or not gui_client.cli:
+        return  # Se cerró el nodo porque faltaba un servicio
+
     while True:
-        user_input = input("Ingrese 1 para Empezar o 0 para Finalizar")  # Solicita entrada al usuario
-        
-        if user_input=='1':
-            action_response = gui_client.send_req_action(True)  # Envía la solicitud de accion
-            gui_client.get_logger().info('Calculado' if action_response else 'Error')  # Imprime el resultado de la accion
-            if action_response: gui_client.send_request(True)  # Envía la solicitud al servicio según la entrada
+        user_input = input("Ingrese 1 para Empezar o 0 para Finalizar: ")
+
+        if user_input == '1':
+            action_response = gui_client.send_req_action()
+            gui_client.get_logger().info('Calculado' if action_response else 'Error')
+            if action_response:
+                gui_client.send_request(True)
             continue
-        elif user_input=='0' :
-            gui_client.send_request(False)  # Envía la solicitud al servicio según la entrada
+        elif user_input == '0':
+            gui_client.send_request(False)
             gui_client.send_req_service()
             break
         else:
-            print("Entrada invalida. Ingrese 1 o 0.")  # Mensaje de error si la entrada no es válida
-            continue  # Reintenta pedir entrada
+            print("Entrada inválida. Ingrese 1 o 0.")
+            continue
 
-    rclpy.shutdown()  # Apaga ROS 2 al finalizar
+    gui_client.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
-    main()  # Ejecuta la función principal
+    main()
