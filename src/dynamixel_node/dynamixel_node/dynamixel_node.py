@@ -22,8 +22,8 @@ TORQUE_ENABLE = 1
 TORQUE_DISABLE = 0
 DXM_MOVING_STATUS_THRESHOLD = 10
 
-MAX_RETRIES = 5
-RETRY_DELAY = 10
+# Lista de motores activos
+MOTORES_ACTIVOS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
 
 portHandler = PortHandler(DEVICENAME)
 packetHandler = PacketHandler(PROTOCOL_VERSION)
@@ -34,35 +34,22 @@ class DynamixelNode(Node):
         super().__init__('dynamixel_node')
         self.action = ActionServer(self, Posicionar, 'posicionar_motores', self.action_callback)
 
-        for attempt in range(MAX_RETRIES):
-            try:
-                if portHandler.openPort():
-                    self.get_logger().info(f'Puerto abierto en {DEVICENAME}')
-                    break
-                else:
-                    raise Exception(f'Error al abrir el puerto (Intento {attempt+1}/{MAX_RETRIES})')
-            except Exception as e:
-                self.get_logger().error(str(e))
-                self.get_logger().info(f'Reintentando en {RETRY_DELAY} segundos...')
-                time.sleep(RETRY_DELAY)
-        else:
-            self.get_logger().error("No se pudo abrir el puerto después de varios intentos. Saliendo...")
+        if not portHandler.openPort():
+            self.get_logger().error(f'Error al abrir el puerto en {DEVICENAME}')
             exit(1)
+        self.get_logger().info(f'Puerto abierto en {DEVICENAME}')
 
-        try:
-            if portHandler.setBaudRate(BAUDRATE):
-                self.get_logger().info("Baudrate configurado correctamente")
-            else:
-                raise Exception("Error al configurar el baudrate")
-        except Exception as e:
-            self.get_logger().error(str(e))
+        if not portHandler.setBaudRate(BAUDRATE):
+            self.get_logger().error("Error al configurar el baudrate")
+            exit(1)
+        self.get_logger().info("Baudrate configurado correctamente")
 
-        for i in range(1, 19):
-            dxm_comm_result, dxm_error = packetHandler.write1ByteTxRx(portHandler, i, ADDR_TORQUE_ENABLE, TORQUE_ENABLE)
+        for motor_id in MOTORES_ACTIVOS:
+            dxm_comm_result, dxm_error = packetHandler.write1ByteTxRx(portHandler, motor_id, ADDR_TORQUE_ENABLE, TORQUE_ENABLE)
             if dxm_comm_result != COMM_SUCCESS or dxm_error != 0:
-                self.get_logger().error(f"Error al habilitar torque de motor [{i}]")
+                self.get_logger().error(f"Error al habilitar torque de motor [{motor_id}]")
             else:
-                self.get_logger().info(f"Torque habilitado en motor [{i}]")
+                self.get_logger().info(f"Torque habilitado en motor [{motor_id}]")
 
     def action_callback(self, goal_handle):
         self.get_logger().info('Posicionando motores con Sync Write')
@@ -70,17 +57,17 @@ class DynamixelNode(Node):
 
         sync_write.clearParam()
         
-        for i, position in enumerate(goal_handle.request.positions, start=1):
+        for motor_id, position in zip(MOTORES_ACTIVOS, goal_handle.request.positions):
             param_goal_position = [DXL_LOBYTE(DXL_LOWORD(position)),
                                    DXL_HIBYTE(DXL_LOWORD(position)),
                                    DXL_LOBYTE(DXL_HIWORD(position)),
                                    DXL_HIBYTE(DXL_HIWORD(position))]
-            if not sync_write.addParam(i, param_goal_position):
-                self.get_logger().error(f'Error al agregar motor {i} a Sync Write')
+            if not sync_write.addParam(motor_id, param_goal_position):
+                self.get_logger().error(f'Error al agregar motor {motor_id} a Sync Write')
                 goal_handle.abort()
                 return Posicionar.Result(flag=False)
             
-            feedback.status = f'Preparando motor {i} a {position}'
+            feedback.status = f'Preparando motor {motor_id} a {position}'
             goal_handle.publish_feedback(feedback)
         
         dxm_comm_result = sync_write.txPacket()
@@ -94,12 +81,12 @@ class DynamixelNode(Node):
         return Posicionar.Result(flag=True)
 
     def close_motors(self):
-        for i in range(1, 19):
-            dxm_comm_result, dxm_error = packetHandler.write1ByteTxRx(portHandler, i, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
+        for motor_id in MOTORES_ACTIVOS:
+            dxm_comm_result, dxm_error = packetHandler.write1ByteTxRx(portHandler, motor_id, ADDR_TORQUE_ENABLE, TORQUE_DISABLE)
             if dxm_comm_result != COMM_SUCCESS or dxm_error != 0:
-                self.get_logger().error(f"Error al deshabilitar torque de motor [{i}]")
+                self.get_logger().error(f"Error al deshabilitar torque de motor [{motor_id}]")
             else:
-                self.get_logger().info(f"Torque deshabilitado en motor [{i}]")
+                self.get_logger().info(f"Torque deshabilitado en motor [{motor_id}]")
         portHandler.closePort()
         self.get_logger().info("Motores apagados y puerto cerrado.")
 
