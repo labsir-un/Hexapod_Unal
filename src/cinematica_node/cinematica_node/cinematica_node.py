@@ -72,7 +72,8 @@ class CinematicaNode(Node):
                 np.arccos(((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2 + L2 ** 2 - L3 ** 2) / 
                 (2 * L2 * np.sqrt((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2))
             ) + np.arctan2(z, np.sqrt(x**2 + y**2) - L1)) - 3
-            q3 = np.degrees(np.arccos((L2 ** 2 + L3 ** 2 - ((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2)) / (2 * L2 * L3))) - 35
+            q3 = np.degrees(np.arccos((L2 ** 2 + L3 ** 2 - ((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2)) / (2 * L2 * L3))) - 90
+            q3 = -q3
             
             if foot_number % 2 == 0:
                 if foot_number == 4:
