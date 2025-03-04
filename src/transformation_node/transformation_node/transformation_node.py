@@ -15,7 +15,7 @@ class TransformationNode(Node):
         self.n = 0  # Contador para el índice de posiciones
         self.action_in_progress = False  # Bandera para controlar el estado de la acción
 
-        self.timer = 0.0001
+        self.cop_client = self.create_client(SetBool,'verificar_posiciones') 
 
         self.cli_action = ActionClient(self, Posicionar, 'posicionar_motores')
         # self.srv = self.create_service(Activar, 'activar', self.service_callback)
@@ -97,34 +97,49 @@ class TransformationNode(Node):
                 for pos in response.positions
             ]
             self.radianes = [round((pos * 3.141592) / 180, 2) for pos in response.positions]
-            
+
             self.get_logger().info(f"Publicando en joint_values_rad: {self.radianes}")
             msg = String()
             msg.data = ', '.join(map(str, self.radianes))
             self.publisher.publish(msg)
-            
-            
+
             if not self.sim and not self.cli_action.wait_for_server(timeout_sec=2.0):
                 self.get_logger().error("El servidor de acción 'posicionar_motores' no está disponible.")
                 self.action_in_progress = False
                 return
             else:
-                self.get_logger().info("Modo simulacion")
+                self.get_logger().info("Modo simulación")
 
             if not self.sim:
                 goal_msg = Posicionar.Goal()
                 goal_msg.positions = data_aux
                 future_goal = self.cli_action.send_goal_async(goal_msg)
                 future_goal.add_done_callback(self.goal_response_callback)
-                self.get_logger().warn('Aca')
             else:
-                self.n += 1
-                self.get_logger().warn('Avance')
                 self.action_in_progress = False
+
+                # Llamado al servicio en CoppeliaSim
+                req = SetBool.Request()
+                req.data = True
+                future_service = self.cop_client.call_async(req)
+                future_service.add_done_callback(self.coppelia_response_callback)
 
         except Exception as e:
             self.get_logger().error(f"Error al llamar al servicio: {str(e)}")
             self.action_in_progress = False
+
+    def coppelia_response_callback(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info("CoppeliaSim confirmó que las posiciones han sido alcanzadas. Avanzando al siguiente paso.")
+                self.n += 1
+            else:
+                self.get_logger().info("CoppeliaSim aún no ha alcanzado las posiciones. Reintentando.")
+                self.n = self.n  # No cambia, pero explícitamente lo mantenemos igual.
+
+        except Exception as e:
+            self.get_logger().error(f"Error en la respuesta del servicio de CoppeliaSim: {str(e)}")
 
     def goal_response_callback(self, future_goal):
         goal_handle = future_goal.result()
