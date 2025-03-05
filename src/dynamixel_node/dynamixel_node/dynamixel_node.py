@@ -54,7 +54,7 @@ class DynamixelNode(Node):
             else:
                 self.get_logger().info(f"Torque habilitado en motor [{motor_id}]")
 
-        if not self.cliente.wait_for_server(timeout_sec=5.0):
+        if not self.cliente.wait_for_service(timeout_sec=5.0):
             self.get_logger().error("El servidor de 'activar' no está disponible.")
             rclpy.shutdown()
             return

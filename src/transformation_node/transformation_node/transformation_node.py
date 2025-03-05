@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
 from std_msgs.msg import Float32MultiArray, String
-from hexapod_interfaces.srv import Activar, SiguientePosicion
+from hexapod_interfaces.srv import SiguientePosicion
 from hexapod_interfaces.action import Calcular
 from std_srvs.srv import SetBool
 from hexapod_interfaces.action import Posicionar
