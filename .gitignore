@@ -1,3 +1,7 @@
 build/
 install/
 log/
+src/cinematica_node/cinematica_node/__pycache__/
+src/transformation_node/transformation_node/__pycache__/
+src/gui_node/gui_node/__pycache__
+src/dynamixel_node/dynamixel_node/__pycache__/
