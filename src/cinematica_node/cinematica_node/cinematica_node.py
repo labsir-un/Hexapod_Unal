@@ -60,10 +60,10 @@ class CinematicaNode(Node):
     def calcular_trayectoria(self):
         """Calcula la trayectoria del hexápodo usando cinemática inversa."""
         L1, L2, L3 = 5, 6, 13
-        T_total, N_ciclos, N_puntos = 5, 1, 20
+        T_total, N_ciclos, N_puntos = 5, 1, 10
         T = T_total / N_ciclos
     
-        t, x, y, z = self.trayectoria(7.5, 3, T, N_puntos, N_ciclos)
+        t, x, y, z = self.trayectoria(7.5, 3.5, T, N_puntos, N_ciclos)
 
         q = np.zeros((18, 4 * N_puntos * N_ciclos), float)
         for foot_number in range(1, 7):
@@ -73,7 +73,7 @@ class CinematicaNode(Node):
                 (2 * L2 * np.sqrt((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2))
             ) + np.arctan2(z, np.sqrt(x**2 + y**2) - L1)) - 3
             q3 = np.degrees(np.arccos((L2 ** 2 + L3 ** 2 - ((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2)) / (2 * L2 * L3))) - 90
-            q3 = -q3
+            q3=-q3
 
             if foot_number % 2 == 0:
                 if foot_number == 4:
