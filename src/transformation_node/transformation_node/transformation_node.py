@@ -11,19 +11,18 @@ class TransformationNode(Node):
     def __init__(self):
         super().__init__('transformation_node')
 
-        self.flag = False  # Bandera para activar/desactivar el nodo
-        self.n = 0  # Contador para el índice de posiciones
-        self.action_in_progress = False  # Bandera para controlar el estado de la acción
+        self.flag = False
+        self.n = 0
+        self.action_in_progress = False
 
-        self.cop_client = self.create_client(SetBool,'verificar_posiciones') 
+        self.cop_client = self.create_client(SetBool, 'verificar_posiciones') 
 
         self.cli_action = ActionClient(self, Posicionar, 'posicionar_motores')
-        # self.srv = self.create_service(Activar, 'activar', self.service_callback)
         self.srv = self.create_service(SetBool, 'activar', self.service_callback)
         self.cli = self.create_client(SiguientePosicion, 'siguiente_posicion')
+
         while not self.cli.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Waiting for service...')
-        self.req = SiguientePosicion.Request()
+            self.get_logger().info('Esperando servicio siguiente_posicion...')
 
         self.cli_action = ActionClient(self, Calcular, 'calcular_trayectoria')
         if not self.cli_action.wait_for_server(timeout_sec=5.0):
@@ -31,21 +30,9 @@ class TransformationNode(Node):
             rclpy.shutdown()
             return
 
-        self.limit = {'Hombro': [-90.0, 90.0], 'Codo': [-90.0, 90.0], 'Muneca': [-90.0, 90.0]}
-        self.keys = ['Hombro', 'Codo', 'Muneca']
-        
         self.sim = False
         self.publisher = self.create_publisher(String, 'joint_values_rad', 10)
-        self.received_data = []
-        self.radianes = []
-
-        self.request_timer = self.create_timer(0.0001, self.check_and_send_request)
-
-    # def service_callback(self, request, response):
-    #     self.flag = request.indicacion
-    #     response.flag = self.flag
-    #     self.get_logger().info(f'Nodo {"activado" if self.flag else "desactivado"}')
-    #     return response
+        self.request_timer = self.create_timer(0.1, self.check_and_send_request)
 
     def send_req_action(self):
         """Envía solicitud de acción para calcular trayectoria."""
@@ -70,32 +57,23 @@ class TransformationNode(Node):
 
     def service_callback(self, request, response):
         self.flag = True
-        if not request.data:
-            self.sim = True
-        else:
-            self.sim = False
+        self.sim = not request.data  
         response.success = self.send_req_action()
         self.get_logger().info(f'Nodo {"activado" if self.flag else "desactivado"}')
         return response
 
     def check_and_send_request(self):
-        if not self.action_in_progress:  # Solo intenta si no hay otra acción en progreso
-            if self.flag:  # Solo inicia si está activado
-                self.action_in_progress = True
-                self.get_logger().info("Enviando solicitud al servicio siguiente_posicion...")
-                self.req.index = self.n
-                future = self.cli.call_async(self.req)
-                future.add_done_callback(self.response_callback)
-            else:
-                self.get_logger().info("Nodo desactivado. No se enviarán más solicitudes.")
+        if not self.action_in_progress and self.flag:
+            self.action_in_progress = True
+            self.get_logger().info("Solicitando siguiente posición...")
+            req = SiguientePosicion.Request()
+            req.index = self.n
+            future = self.cli.call_async(req)
+            future.add_done_callback(self.response_callback)
 
     def response_callback(self, future):
         try:
             response = future.result()
-            data_aux = [
-                max(0, min(4095, int(round(2045.0 + ((1028.0 * pos) / 90), 0))))
-                for pos in response.positions
-            ]
             self.radianes = [round((pos * 3.141592) / 180, 2) for pos in response.positions]
 
             self.get_logger().info(f"Publicando en joint_values_rad: {self.radianes}")
@@ -103,43 +81,22 @@ class TransformationNode(Node):
             msg.data = ', '.join(map(str, self.radianes))
             self.publisher.publish(msg)
 
-            if not self.sim and not self.cli_action.wait_for_server(timeout_sec=2.0):
-                self.get_logger().error("El servidor de acción 'posicionar_motores' no está disponible.")
-                self.action_in_progress = False
-                return
-            else:
-                self.get_logger().info("Modo simulación")
-
             if not self.sim:
-                goal_msg = Posicionar.Goal()
-                goal_msg.positions = data_aux
-                future_goal = self.cli_action.send_goal_async(goal_msg)
-                future_goal.add_done_callback(self.goal_response_callback)
+                self.send_goal_to_motors(response.positions)
             else:
-                self.action_in_progress = False
-
-                # Llamado al servicio en CoppeliaSim
-                req = SetBool.Request()
-                req.data = True
-                future_service = self.cop_client.call_async(req)
-                future_service.add_done_callback(self.coppelia_response_callback)
+                self.wait_for_coppelia_confirmation()
 
         except Exception as e:
-            self.get_logger().error(f"Error al llamar al servicio: {str(e)}")
+            self.get_logger().error(f"Error en la respuesta del servicio: {str(e)}")
             self.action_in_progress = False
 
-    def coppelia_response_callback(self, future):
-        try:
-            response = future.result()
-            if response.success:
-                self.get_logger().info("CoppeliaSim confirmó que las posiciones han sido alcanzadas. Avanzando al siguiente paso.")
-                self.n += 1
-            else:
-                self.get_logger().info("CoppeliaSim aún no ha alcanzado las posiciones. Reintentando.")
-                self.n = self.n  # No cambia, pero explícitamente lo mantenemos igual.
+    def send_goal_to_motors(self, positions):
+        """Envía una meta a los motores y espera la confirmación antes de continuar."""
+        goal_msg = Posicionar.Goal()
+        goal_msg.positions = [max(0, min(4095, int(round(2045.0 + ((1028.0 * pos) / 90), 0)))) for pos in positions]
 
-        except Exception as e:
-            self.get_logger().error(f"Error en la respuesta del servicio de CoppeliaSim: {str(e)}")
+        future_goal = self.cli_action.send_goal_async(goal_msg)
+        future_goal.add_done_callback(self.goal_response_callback)
 
     def goal_response_callback(self, future_goal):
         goal_handle = future_goal.result()
@@ -148,7 +105,7 @@ class TransformationNode(Node):
             self.action_in_progress = False
             return
 
-        self.get_logger().warning("Acción aceptada")
+        self.get_logger().info("Acción aceptada. Esperando resultado...")
         future_result = goal_handle.get_result_async()
         future_result.add_done_callback(self.result_callback)
 
@@ -156,15 +113,36 @@ class TransformationNode(Node):
         try:
             result = future_result.result().result
             if result.flag:
-                self.get_logger().warning(f'Acción ejecutada correctamente. n={self.n}')
-                self.n += 1
+                self.get_logger().info(f'Acción ejecutada correctamente. n={self.n}')
+                self.wait_for_coppelia_confirmation()
             else:
                 self.get_logger().error('La acción no se ejecutó con éxito.')
+                self.action_in_progress = False
         except Exception as e:
             self.get_logger().error(f"Error en la ejecución de la acción: {str(e)}")
-        finally:
             self.action_in_progress = False
 
+    def wait_for_coppelia_confirmation(self):
+        """Llama al servicio de CoppeliaSim y espera hasta recibir confirmación."""
+        req = SetBool.Request()
+        req.data = True
+        self.get_logger().info("Esperando confirmación de CoppeliaSim...")
+        future_service = self.cop_client.call_async(req)
+        future_service.add_done_callback(self.coppelia_response_callback)
+
+    def coppelia_response_callback(self, future):
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info("CoppeliaSim confirmó la posición. Avanzando a la siguiente posición.")
+                self.n += 1
+                self.action_in_progress = False  
+            else:
+                self.get_logger().info("CoppeliaSim no ha alcanzado la posición. Reintentando en 0.5s...")
+                self.create_timer(0.5, self.wait_for_coppelia_confirmation)  # Reintento
+        except Exception as e:
+            self.get_logger().error(f"Error en la respuesta de CoppeliaSim: {str(e)}")
+            self.action_in_progress = False
 
 def main(args=None):
     rclpy.init(args=args)
