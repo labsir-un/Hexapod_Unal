@@ -77,4 +77,4 @@ Once *dynamixel_node* reaches all the positions, *transformation_node* will retr
 
 This project consists of five nodes: three general nodes, one for simulation, and one for hardware. Communication between nodes is handled through topics, services, and actions, as shown below.
 
-![1741327436078](images/README/NODOS_ROS2.png)
+![1741327637519](images/README/1741327637519.png)
