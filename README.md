@@ -1,6 +1,6 @@
 # Hexapod ROS 2
 
-## Authors
+## Authors UNAL2025
 
 * **Andres Camilo Torres Cajamarca** – *Mechatronics Engineering Student*
 * **Felipe Chaves Delgadillo** – *Mechatronics Engineering Student*
@@ -26,7 +26,7 @@ Once this time has passed, from a computer connected to the same network, run th
 ssh hexapod@hexapod.local
 ````
 
-Here, it will ask for a password, which is: ***UNAL2025***.
+Here, it will ask for a password, which is: ***ask for it to team***.
 
 With this, you now have access to the robot, and locomotion can be executed.
 
