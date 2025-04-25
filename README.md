@@ -94,3 +94,8 @@ Once *dynamixel_node* reaches all the positions, *transformation_node* will retr
 This project consists of five nodes: three general nodes, one for simulation, and one for hardware. Communication between nodes is handled through topics, services, and actions, as shown below.
 
 ![1741327637519](images/README/1741327637519.png)
+
+### Video
+
+https://github.com/user-attachments/assets/06a28685-2799-44d1-bb77-2bedf3dfc20e
+
