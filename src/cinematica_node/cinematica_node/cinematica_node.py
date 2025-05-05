@@ -28,7 +28,7 @@ class CinematicaNode(Node):
         result = Calcular.Result()
         mode = goal_handle.request.indicacion
         
-        if  mode > 0:
+        if  mode >= 0:
             self.q = self.calcular_trayectoria()
             self.max = len(self.q[1]) if self.q is not None else 0
             
@@ -59,8 +59,8 @@ class CinematicaNode(Node):
                 for i in range(1, 7):
                     self.q[3 * i - 3, :] = -self.q[3 * i - 3, :]
             case 0:
-                self.get_logger().warn("Trayectoria reversa")
-                self.q = np.zeros(np.size(self.q))
+                self.get_logger().warn("Pausa")
+                self.q = np.zeros(np.shape(self.q))
 
 
         goal_handle.succeed()
