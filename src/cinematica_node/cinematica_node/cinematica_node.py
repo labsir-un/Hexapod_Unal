@@ -57,7 +57,7 @@ class CinematicaNode(Node):
         response.positions = self.q[:, index].flatten().tolist()
         return response
     
-    def calcular_trayectoria(self):
+    def calcular_trayectoria_rec(self):
         """Calcula la trayectoria del hexápodo usando cinemática inversa."""
         L1, L2, L3 = 5, 6, 13
         T_total, N_ciclos, N_puntos = 5, 1, 10
@@ -88,6 +88,41 @@ class CinematicaNode(Node):
             q[3 * foot_number - 1, :] = q3
 
         return q
+
+    def calcular_trayectoria(self): 
+        """Calcula la trayectoria del hexápodo usando cinemática inversa. Giro IZQ"""
+        L1, L2, L3 = 5, 6, 13
+        T_total, N_ciclos, N_puntos = 5, 1, 10
+        T = T_total / N_ciclos
+    
+        t, x, y, z = self.trayectoria(7.5, 3.5, T, N_puntos, N_ciclos)
+
+        q = np.zeros((18, 4 * N_puntos * N_ciclos), float)
+        for foot_number in range(1, 7):
+            q1 = np.degrees(np.arctan2(y, x))
+            q2 = -np.degrees(
+                np.arccos(((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2 + L2 ** 2 - L3 ** 2) / 
+                (2 * L2 * np.sqrt((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2))
+            ) + np.arctan2(z, np.sqrt(x**2 + y**2) - L1)) - 3
+            q3 = np.degrees(np.arccos((L2 ** 2 + L3 ** 2 - ((np.sqrt(x**2 + y**2) - L1) ** 2 + z ** 2)) / (2 * L2 * L3))) - 90
+            q3 = -q3
+
+            if foot_number % 2 == 0:
+                if foot_number == 4:
+                    q1, q2, q3 = -q1, np.flip(q2), np.flip(q3)
+            else:
+                q1 = -q1
+                if foot_number in [1, 5]:
+                    q1, q2, q3 = -q1, np.flip(q2), np.flip(q3)
+    
+            q[3 * foot_number - 3, :] = q1
+            q[3 * foot_number - 2, :] = q2
+            q[3 * foot_number - 1, :] = q3
+
+        for i in range(1, 6, 2):
+            q[3 * i - 3, :] = -q[3 * i - 3, :]
+
+        return q    
 
     def trayectoria(self, l_total, altura, T, N_puntos, N_ciclos):
         """Genera la trayectoria deseada en el espacio cartesiano."""
