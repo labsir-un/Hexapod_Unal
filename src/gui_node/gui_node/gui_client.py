@@ -75,15 +75,14 @@ def main(args=None):
 
     while True:
         user_input = int(input("Ingrese 1 para Recto, 2 para Izquierda, 3 para Derecha: "))
-        if user_input >= 1 and user_input <= 3:
+        if user_input >= 0 and user_input <= 4:
             action_response = gui_client.send_req_action(user_input)
             gui_client.get_logger().info('Calculado' if action_response else 'Error')
             if action_response:
                 gui_client.send_request(True)
-        elif user_input == 0:
+        elif user_input > 4:
             gui_client.send_request(False)
             gui_client.send_req_service()
-            break
         else:
             print("Entrada inválida.")
             continue
