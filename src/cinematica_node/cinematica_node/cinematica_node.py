@@ -26,8 +26,9 @@ class CinematicaNode(Node):
         
         feedback = Calcular.Feedback()
         result = Calcular.Result()
+        mode = goal_handle.request.indicacion
         
-        if goal_handle.request.indicacion:
+        if  mode != 0:
             self.q = self.calcular_trayectoria()
             self.max = len(self.q[1]) if self.q is not None else 0
             
@@ -40,6 +41,19 @@ class CinematicaNode(Node):
         else:
             self.get_logger().warning("Solicitud de trayectoria inválida.")
             result.flag = False
+
+        match mode:
+            case 1:
+                self.get_logger().warn("Trayectoria recta")
+                pass
+            case 2:
+                self.get_logger().warn("Trayectoria giro izquierda")
+                for i in range(1, 6, 2):
+                    q[3 * i - 3, :] = -q[3 * i - 3, :]
+            case 3:
+                self.get_logger().warn("Trayectoria giro derecha")
+                for i in range(2, 7, 2):
+                    q[3 * i - 3, :] = -q[3 * i - 3, :]
 
         goal_handle.succeed()
         return result
