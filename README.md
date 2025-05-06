@@ -99,3 +99,19 @@ This project consists of five nodes: three general nodes, one for simulation, an
 
 https://github.com/user-attachments/assets/eb56e972-26f8-436f-b74e-e61149061cad
 
+#### Avance
+
+https://github.com/user-attachments/assets/610ccf62-d634-4932-befa-e8fde37b9160
+
+#### Giros
+
+https://github.com/user-attachments/assets/363c9b54-b7d7-47bb-8460-3d7c6445cb0d
+
+https://github.com/user-attachments/assets/74d0b48a-5a30-4c76-9d68-66923a830aa5
+
+#### Reversa
+
+https://github.com/user-attachments/assets/5f408fc8-d56d-40ce-a2b4-17a4077839e3
+
+
+
