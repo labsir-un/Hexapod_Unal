@@ -39,10 +39,10 @@ class GuiClient(Node):
             return None
         return future.result()
 
-    def send_req_action(self):
+    def send_req_action(self, mode):
         """Envía solicitud de acción para calcular trayectoria."""
         goal_msg = Calcular.Goal()
-        goal_msg.indicacion = True
+        goal_msg.indicacion = mode
 
         send_goal_future = self.act_cli.send_goal_async(goal_msg)
         rclpy.spin_until_future_complete(self, send_goal_future, timeout_sec=10.0)
@@ -74,20 +74,17 @@ def main(args=None):
         return  # Se cerró el nodo porque faltaba un servicio
 
     while True:
-        user_input = input("Ingrese 1 para Empezar o 0 para Finalizar: ")
-
-        if user_input == '1':
-            action_response = gui_client.send_req_action()
+        user_input = int(input("Ingrese 1 para Recto, 2 para Izquierda, 3 para Derecha: "))
+        if user_input >= 0 and user_input <= 4:
+            action_response = gui_client.send_req_action(user_input)
             gui_client.get_logger().info('Calculado' if action_response else 'Error')
             if action_response:
                 gui_client.send_request(True)
-            continue
-        elif user_input == '0':
+        elif user_input > 4:
             gui_client.send_request(False)
             gui_client.send_req_service()
-            break
         else:
-            print("Entrada inválida. Ingrese 1 o 0.")
+            print("Entrada inválida.")
             continue
 
     gui_client.destroy_node()

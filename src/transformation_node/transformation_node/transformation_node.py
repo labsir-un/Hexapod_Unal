@@ -32,7 +32,7 @@ class TransformationNode(Node):
     def service_callback(self, request, response):
         self.flag = request.indicacion
         response.flag = self.flag
-        self.get_logger().info(f'Nodo {"activado" if self.flag else "desactivado"}')
+        self.get_logger().info(f'Nodo activado')
         return response
 
     def check_and_send_request(self):
@@ -106,7 +106,6 @@ def main(args=None):
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-    node.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
