@@ -113,5 +113,6 @@ https://github.com/user-attachments/assets/74d0b48a-5a30-4c76-9d68-66923a830aa5
 
 https://github.com/user-attachments/assets/5f408fc8-d56d-40ce-a2b4-17a4077839e3
 
+#### Simulación
 
-
+https://github.com/user-attachments/assets/7af156b1-5c92-4b90-be09-eba2ca43c969
