@@ -1,0 +1,124 @@
+
+    -- Lista de articulaciones (hombros, codos, muñecas)
+joints = {
+        '/Hombro1', '/Hombro1/Codo', '/Hombro1/Codo/Muneca',
+        '/Hombro2', '/Hombro2/Codo', '/Hombro2/Codo/Muneca',
+        '/Hombro3', '/Hombro3/Codo', '/Hombro3/Codo/Muneca',
+        '/Hombro4', '/Hombro4/Codo', '/Hombro4/Codo/Muneca',
+        '/Hombro5', '/Hombro5/Codo', '/Hombro5/Codo/Muneca',
+        '/Hombro6', '/Hombro6/Codo', '/Hombro6/Codo/Muneca'
+    }
+
+    -- Desfase en radianes para cada articulación
+offsets = { 
+        -0.78, 0.78, -1.57, 0.78, -0.78, 1.13, 
+        0, 0.78, -1.57, 0, -0.78, 1.13, 
+        0.78, 0.78, -1.57, -0.78, -0.78, 1.13 
+    }
+    
+float_list = {}
+
+function subscriber_callback(msg)
+
+    local received_string = msg.data
+    
+    -- Convertir los datos recibidos en una lista de números flotantes
+    float_list = {}
+    for number in string.gmatch(received_string, "[^,]+") do
+        table.insert(float_list, tonumber(number))
+    end
+    
+    -- Índices de las articulaciones que deben ser negativas
+    local correction = {6,9,12,15,18}  
+    for _, idx in ipairs(correction) do
+        if float_list[idx] then
+           float_list[idx] = -float_list[idx]+0.95
+        end
+    end
+    
+    -- Corrección de signo adicional para algunas articulaciones
+    local sign_correction = {5, 6, 11, 12, 17, 18}  
+    for _, idx in ipairs(sign_correction) do
+        if float_list[idx] then
+           float_list[idx] = -float_list[idx]
+        end
+    end
+    
+    -- Aplicar los desfases y asignar las posiciones a las articulaciones
+    assignJointPositions(joints, float_list, offsets)
+    
+    --sim.addLog(sim.verbosity_scriptinfos, 'Subscriber recibió: '..msg.data)
+end
+
+function server_callback(req)
+    local tolerance = 0.1 -- Tolerancia en radianes
+    local all_reached = true
+    
+    sim.addLog(sim.verbosity_scriptinfos,"Servicio")
+
+    for i = 1, #joints do
+        local joint = sim.getObject(joints[i])
+        local current_position = sim.getJointPosition(joint)
+
+        -- Comparar con la posición objetivo ajustada por el desfase
+        local target_position = float_list[i] - offsets[i]
+
+        if math.abs(current_position - target_position) > tolerance then
+            all_reached = false
+            break
+        end
+    end
+
+    -- Registrar en consola
+    if all_reached then
+        sim.addLog(sim.verbosity_scriptinfos, "Todas las posiciones alcanzadas.")
+    else
+        sim.addLog(sim.verbosity_scriptinfos, "Aún no se han alcanzado todas las posiciones.")
+    end
+
+    -- Devolver la respuesta del servicio
+    return {success = all_reached, message = ""}
+end
+
+-- Función recursiva para asignar las posiciones de las articulaciones con desfases
+function assignJointPositions(joints, float_list, offsets)
+    for i = 1, #joints do
+        local joint = sim.getObject(joints[i])  -- Obtener objeto de la articulación
+        local adjusted_value = float_list[i] - offsets[i]  -- Aplicar desfase
+        sim.setJointTargetPosition(joint, adjusted_value)  -- Asignar posición
+    end
+end
+
+
+function sysCall_init()
+    sim = require('sim')
+    simROS2 = require('simROS2')
+    
+    -- Suscribirse al tópico de ROS2 para recibir configuraciones articulares
+    subscriber = simROS2.createSubscription('/joint_values_rad', 'std_msgs/msg/String', 'subscriber_callback')
+    
+    -- Cliente del servicio "activar"
+    cliente = simROS2.createClient('activar', 'std_srvs/srv/SetBool')
+
+    -- Servidor del servicio "verificar_posiciones"
+    server = simROS2.createService('verificar_posiciones', 'std_srvs/srv/SetBool', 'server_callback')
+    
+    -- Verificar si el servicio de activación está disponible antes de continuar
+    if simROS2.waitForService(cliente, 5.0) then 
+        sim.addLog(sim.verbosity_scriptinfos, 'Simulación iniciada exitosamente')
+        req = {data = false}
+        response = simROS2.call(cliente, req)
+        if response then
+            sim.addLog(sim.verbosity_scriptinfos,"Exito")
+        end
+    else 
+        sim.addLog(sim.verbosity_errors, 'Error al iniciar la simulación')
+    end
+end
+
+function sysCall_actuation()
+end
+
+function sysCall_cleanup()
+    simROS2.shutdownSubscription(subscriber)
+end
