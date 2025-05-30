@@ -4,7 +4,7 @@ from rclpy.action import ActionServer
 from hexapod_interfaces.action import Posicionar
 from dynamixel_sdk import PortHandler, PacketHandler, GroupSyncWrite
 from std_msgs.msg import String
-from concurrent.futures import ThreadPoolExecutor
+from rclpy.executors import MultiThreadedExecutor
 
 ADDR_GOAL_POSITION = 116
 ADDR_HARDWARE_ERROR = 70
@@ -79,13 +79,18 @@ class DynamixelNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = DynamixelNode()
-    executor = rclpy.executors.MultiThreadedExecutor()
+
+    executor = MultiThreadedExecutor()
     executor.add_node(node)
+
     try:
         executor.spin()
     except KeyboardInterrupt:
         pass
-    rclpy.shutdown()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
