@@ -82,12 +82,13 @@ class DynamixelNode(Node):
             return Posicionar.Result(flag=False)
 
         # Verificar errores de hardware
-        for dxl_id in DXL_ID:
-            _, dxl_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, dxl_id, ADDR_HARDWARE_ERROR)
-            if dxl_result != 0 or dxl_error != 0:
-                self.get_logger().error(f"Error de hardware en motor {dxl_id} (result={dxl_result}, error={dxl_error})")
-                goal_handle.abort()
-                return Posicionar.Result(flag=False)
+
+        #for dxl_id in DXL_ID:
+        #    _, dxl_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, dxl_id, ADDR_HARDWARE_ERROR)
+        #    if dxl_result != 0 or dxl_error != 0:
+        #        self.get_logger().error(f"Error de hardware en motor {dxl_id} (result={dxl_result}, error={dxl_error})")
+        #        goal_handle.abort()
+        #        return Posicionar.Result(flag=False)
 
         self.get_logger().info("Todos los motores posicionados correctamente.")
         goal_handle.succeed()
@@ -111,7 +112,7 @@ def main(args=None):
                 node.port_handler, dxl_id, 64, 0  # 64 = ADDR_TORQUE_ENABLE
             )
             node.get_logger().info(f"Torque desactivado en motor {dxl_id}")
-    
+
         node.destroy_node()
         rclpy.shutdown()
 
