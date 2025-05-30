@@ -50,6 +50,13 @@ class DynamixelNode(Node):
             else:
                 self.get_logger().info(f"Torque activado en motor {dxl_id}")
 
+        ADDR_PROFILE_VELOCITY = 112
+        profile_velocity = 1023  # Ajusta este valor entre 0–1023 o más según el modelo
+
+        for dxl_id in DXL_ID:
+            node.packet_handler.write4ByteTxRx(
+                node.port_handler, dxl_id, ADDR_PROFILE_VELOCITY, profile_velocity
+            )
 
     async def handle_action_callback(self, goal_handle):
         self.get_logger().info("Acción recibida. Posicionando motores.")
