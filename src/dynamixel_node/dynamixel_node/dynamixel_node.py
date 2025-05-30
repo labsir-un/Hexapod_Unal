@@ -105,8 +105,16 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        # Desactivar torque en todos los motores antes de apagar
+        for dxl_id in DXL_ID:
+            node.packet_handler.write1ByteTxRx(
+                node.port_handler, dxl_id, 64, 0  # 64 = ADDR_TORQUE_ENABLE
+            )
+            node.get_logger().info(f"Torque desactivado en motor {dxl_id}")
+    
         node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
