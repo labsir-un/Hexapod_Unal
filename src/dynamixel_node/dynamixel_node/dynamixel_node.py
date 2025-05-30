@@ -1,16 +1,16 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer
-from hexapod_interfaces.action import Posicionar
-from dynamixel_sdk import PortHandler, PacketHandler, GroupSyncWrite
-from std_msgs.msg import String
 from rclpy.executors import MultiThreadedExecutor
+from hexapod_interfaces.action import Posicionar
+
+from dynamixel_sdk import PortHandler, PacketHandler, GroupSyncWrite
 
 ADDR_GOAL_POSITION = 116
 ADDR_HARDWARE_ERROR = 70
 LEN_GOAL_POSITION = 4
 PROTOCOL_VERSION = 2.0
-DXL_ID = [i for i in range(1, 19)]
+DXL_ID = [i for i in range(1, 19)]  # IDs del 1 al 18
 BAUDRATE = 1000000
 DEVICENAME = '/dev/ttyUSB0'
 
@@ -23,10 +23,14 @@ class DynamixelNode(Node):
 
         if not self.port_handler.openPort():
             self.get_logger().error("Fallo al abrir el puerto.")
+        else:
+            self.get_logger().info("Puerto abierto correctamente.")
+
         if not self.port_handler.setBaudRate(BAUDRATE):
             self.get_logger().error("Fallo al configurar el baudrate.")
+        else:
+            self.get_logger().info("Baudrate configurado correctamente.")
 
-        self.executor = ThreadPoolExecutor(max_workers=2)
         self.action_server = ActionServer(
             self,
             Posicionar,
@@ -34,14 +38,14 @@ class DynamixelNode(Node):
             self.handle_action_callback
         )
 
-    def handle_action_callback(self, goal_handle):
-        # Ejecutar en otro hilo para evitar bloqueo
-        future = self.executor.submit(self.action_callback, goal_handle)
-        return future
-
-    def action_callback(self, goal_handle):
+    async def handle_action_callback(self, goal_handle):
         self.get_logger().info("Acción recibida. Posicionando motores.")
         positions = goal_handle.request.positions
+
+        if len(positions) != len(DXL_ID):
+            self.get_logger().error("Cantidad de posiciones no coincide con cantidad de motores.")
+            goal_handle.abort()
+            return Posicionar.Result(flag=False)
 
         for i, dxl_id in enumerate(DXL_ID):
             param_goal_position = [
@@ -64,11 +68,11 @@ class DynamixelNode(Node):
             goal_handle.abort()
             return Posicionar.Result(flag=False)
 
-        # Verificar errores de hardware en cada motor
+        # Verificar errores de hardware
         for dxl_id in DXL_ID:
-            dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, dxl_id, ADDR_HARDWARE_ERROR)[0]
-            if dxl_error != 0:
-                self.get_logger().error(f"Error de hardware en motor {dxl_id}: código {dxl_error}")
+            _, dxl_result, dxl_error = self.packet_handler.read1ByteTxRx(self.port_handler, dxl_id, ADDR_HARDWARE_ERROR)
+            if dxl_result != 0 or dxl_error != 0:
+                self.get_logger().error(f"Error de hardware en motor {dxl_id} (result={dxl_result}, error={dxl_error})")
                 goal_handle.abort()
                 return Posicionar.Result(flag=False)
 
@@ -90,7 +94,6 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
