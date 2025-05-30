@@ -38,6 +38,19 @@ class DynamixelNode(Node):
             self.handle_action_callback
         )
 
+        ADDR_TORQUE_ENABLE = 64
+        TORQUE_ENABLE = 1
+
+        for dxl_id in DXL_ID:
+            dxl_comm_result, dxl_error = self.packet_handler.write1ByteTxRx(
+                self.port_handler, dxl_id, ADDR_TORQUE_ENABLE, TORQUE_ENABLE
+            )
+            if dxl_comm_result != 0 or dxl_error != 0:
+                self.get_logger().error(f"Error activando torque en motor {dxl_id} (result={dxl_comm_result}, error={dxl_error})")
+            else:
+                self.get_logger().info(f"Torque activado en motor {dxl_id}")
+
+
     async def handle_action_callback(self, goal_handle):
         self.get_logger().info("Acción recibida. Posicionando motores.")
         positions = goal_handle.request.positions
