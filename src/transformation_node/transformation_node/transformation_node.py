@@ -5,18 +5,20 @@ from std_msgs.msg import String
 from hexapod_interfaces.srv import Activar, SiguientePosicion
 from hexapod_interfaces.action import Posicionar
 
+
 class TransformationNode(Node):
     def __init__(self):
         super().__init__('transformation_node')
 
         self.flag = False
         self.n = 0
+
         self.cli_action = ActionClient(self, Posicionar, 'posicionar_motores')
         self.cli = self.create_client(SiguientePosicion, 'siguiente_posicion')
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Esperando al servicio siguiente_posicion...')
-        self.req = SiguientePosicion.Request()
 
+        self.req = SiguientePosicion.Request()
         self.publisher = self.create_publisher(String, 'joint_values_rad', 10)
         self.srv = self.create_service(Activar, 'activar', self.service_callback)
 
@@ -33,6 +35,7 @@ class TransformationNode(Node):
     def send_request(self):
         if not self.flag:
             return
+
         self.req.index = self.n
         future = self.cli.call_async(self.req)
         future.add_done_callback(self.response_callback)
@@ -49,7 +52,7 @@ class TransformationNode(Node):
             msg.data = ', '.join(map(str, radianes))
             self.publisher.publish(msg)
 
-            if not self.cli_action.wait_for_server(timeout_sec=2.0):
+            if not self.cli_action.wait_for_server(timeout_sec=0.5):
                 self.get_logger().error("Acción 'posicionar_motores' no disponible.")
                 return
 
@@ -81,6 +84,7 @@ class TransformationNode(Node):
         except Exception as e:
             self.get_logger().error(f"Error en la acción: {e}")
 
+
 def main(args=None):
     rclpy.init(args=args)
     node = TransformationNode()
@@ -89,6 +93,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
